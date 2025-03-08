@@ -73,21 +73,21 @@ export class RestAPIStack extends cdk.Stack {
           );
         
         // Custom resources
-        new custom.AwsCustomResource(this, "moviesddbInitData", {
-          onCreate: {
-            service: "DynamoDB",
-            action: "batchWriteItem",
-            parameters: {
-              RequestItems: {
-                [moviesTable.tableName]: generateBatch(movies),
-              },
-            },
-            physicalResourceId: custom.PhysicalResourceId.of("moviesddbInitData"), //.of(Date.now().toString()),
-          },
-          policy: custom.AwsCustomResourcePolicy.fromSdkCalls({
-            resources: [moviesTable.tableArn],
-          }),
-        });
+        // new custom.AwsCustomResource(this, "moviesddbInitData", {
+        //   onCreate: {
+        //     service: "DynamoDB",
+        //     action: "batchWriteItem",
+        //     parameters: {
+        //       RequestItems: {
+        //         [moviesTable.tableName]: generateBatch(movies),
+        //       },
+        //     },
+        //     physicalResourceId: custom.PhysicalResourceId.of("moviesddbInitData"), //.of(Date.now().toString()),
+        //   },
+        //   policy: custom.AwsCustomResourcePolicy.fromSdkCalls({
+        //     resources: [moviesTable.tableArn],
+        //   }),
+        // });
         
         // Permissions 
         // moviesTable.grantReadData(getMovieByIdFn)
