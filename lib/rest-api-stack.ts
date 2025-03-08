@@ -55,7 +55,24 @@ export class RestAPIStack extends cdk.Stack {
           },
         }
         );
+
+        const getMovieReviewByIdFn = new lambdanode.NodejsFunction(
+          this,
+          "GetMovieByIdFn",
+          {
+            architecture: lambda.Architecture.ARM_64,
+            runtime: lambda.Runtime.NODEJS_18_X,
+            entry: `${__dirname}/../lambdas/getMovieReviewById.ts`,
+            timeout: cdk.Duration.seconds(10),
+            memorySize: 128,
+            environment: {
+              TABLE_NAME: moviesTable.tableName,
+              REGION: 'eu-west-1',
+            },
+          }
+          );
         
+        // Custom resources
         new custom.AwsCustomResource(this, "moviesddbInitData", {
           onCreate: {
             service: "DynamoDB",
@@ -75,6 +92,7 @@ export class RestAPIStack extends cdk.Stack {
         // Permissions 
         moviesTable.grantReadData(getMovieByIdFn)
         moviesTable.grantReadData(getAllMoviesFn)
+        moviesTable.grantReadData(getMovieReviewByIdFn)
         
         // REST API 
     const api = new apig.RestApi(this, "RestAPI", {
