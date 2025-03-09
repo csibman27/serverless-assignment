@@ -11,22 +11,22 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
     // Print Event
     console.log("Event: ", JSON.stringify(event));
     const pathParameters = event?.pathParameters;
-    const movieId = pathParameters?.movieId ? parseInt(pathParameters.movieId) : undefined;
+    const reviewId = pathParameters?.reviewId ? parseInt(pathParameters.reviewId) : undefined;
 
-    if (!movieId) {
+    if (!reviewId) {
       return {
         statusCode: 404,
         headers: {
           "content-type": "application/json",
         },
-        body: JSON.stringify({ Message: "Missing movie Id" }),
+        body: JSON.stringify({ Message: "Missing review Id" }),
       };
     }
 
     const commandOutput = await ddbDocClient.send(
       new GetCommand({
         TableName: process.env.TABLE_NAME,
-        Key: { id: movieId },
+        Key: { id: reviewId },
       })
     );
     console.log("GetCommand response: ", commandOutput);
