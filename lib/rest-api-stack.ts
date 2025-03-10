@@ -25,13 +25,14 @@ export class RestAPIStack extends cdk.Stack {
     const movieReviewsTable = new dynamodb.Table(this, "MovieReviewTable", {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       partitionKey: { name: "movieId", type: dynamodb.AttributeType.NUMBER },
+      sortKey: { name: "ReviewerId", type: dynamodb.AttributeType.STRING },
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       tableName: "MovieReview",
     });
 
     movieReviewsTable.addLocalSecondaryIndex({
-      indexName: "roleIx",
-      sortKey: { name: "roleName", type: dynamodb.AttributeType.STRING },
+      indexName: "contentIx",
+      sortKey: { name: "Content", type: dynamodb.AttributeType.STRING },
     });
 
     
@@ -41,7 +42,7 @@ export class RestAPIStack extends cdk.Stack {
       "GetMovieByIdFn",
       {
         architecture: lambda.Architecture.ARM_64,
-        runtime: lambda.Runtime.NODEJS_18_X,
+        runtime: lambda.Runtime.NODEJS_22_X,
         entry: `${__dirname}/../lambdas/getMovieById.ts`,
         timeout: cdk.Duration.seconds(10),
         memorySize: 128,
@@ -57,19 +58,23 @@ export class RestAPIStack extends cdk.Stack {
       "GetMovieReviewByIdFn",
       {
         architecture: lambda.Architecture.ARM_64,
-        runtime: lambda.Runtime.NODEJS_18_X,
+        runtime: lambda.Runtime.NODEJS_22_X,
         entry: `${__dirname}/../lambdas/getMovieReviewById.ts`,
         timeout: cdk.Duration.seconds(10),
         memorySize: 128,
         environment: {
-          TABLE_NAME: movieReviewsTable.tableName,
+          REVIEW_TABLE_NAME: movieReviewsTable.tableName,
           REGION: 'eu-west-1',
         },
       }
     );
-        
-    // Custom resources
-    new custom.AwsCustomResource(this, "moviesddbInitData", {
+    
+    // Permissions 
+    moviesTable.grantReadData(getMovieByIdFn)
+    moviesTable.grantReadData(getMovieReviewByIdFn)
+
+     // Custom resources
+     new custom.AwsCustomResource(this, "moviesddbInitData", {
       onCreate: {
         service: "DynamoDB",
         action: "batchWriteItem",
@@ -82,14 +87,9 @@ export class RestAPIStack extends cdk.Stack {
         physicalResourceId: custom.PhysicalResourceId.of("moviesddbInitData"), //.of(Date.now().toString()),
       },
       policy: custom.AwsCustomResourcePolicy.fromSdkCalls({
-        resources: [moviesTable.tableArn],
-        [movieReviewsTable.tableName]: generateBatch(movieReviews),
+        resources: [moviesTable.tableArn, movieReviewsTable.tableArn]
       }),
     });
-    
-    // Permissions 
-    moviesTable.grantReadData(getMovieByIdFn)
-    moviesTable.grantReadData(getMovieReviewByIdFn)
   
         
     // REST API 

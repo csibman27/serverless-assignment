@@ -1,7 +1,6 @@
 import { APIGatewayProxyHandlerV2 } from "aws-lambda";
-
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, GetCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, GetCommand, QueryCommand } from "@aws-sdk/lib-dynamodb";
 
 
 const ddbDocClient = createDDbDocClient();
@@ -23,27 +22,49 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
       };
     }
 
+    // Query DynamoDB for reviews by movieId
     const commandOutput = await ddbDocClient.send(
-      new GetCommand({
+      new QueryCommand({
         TableName: process.env.TABLE_NAME,
-        Key: { id: movieId },
+        KeyConditionExpression: "movieId = :movieId",  // Assuming "movieId" is the partition key
+        ExpressionAttributeValues: {
+          ":movieId": movieId,
+        },
       })
     );
+
+    // const commandOutput = await ddbDocClient.send(
+    //   new GetCommand({
+    //     TableName: process.env.TABLE_NAME,
+    //     Key: { id: movieId },
+    //   })
+    // );
     
     // log service
     console.log("GetCommand response: ", commandOutput);
-    
-    if (!commandOutput.Item) {
+
+    if (!commandOutput.Items || commandOutput.Items.length === 0) {
       return {
         statusCode: 404,
         headers: {
           "content-type": "application/json",
         },
-        body: JSON.stringify({ Message: "Invalid movie Id" }),
+        body: JSON.stringify({ Message: "No reviews found for this movie" }),
       };
     }
+    
+    // if (!commandOutput.Item) {
+    //   return {
+    //     statusCode: 404,
+    //     headers: {
+    //       "content-type": "application/json",
+    //     },
+    //     body: JSON.stringify({ Message: "Invalid movie Id" }),
+    //   };
+    // }
+    
     const body = {
-      data: commandOutput.Item,
+      data: commandOutput.Items,
     };
 
     // Return Response

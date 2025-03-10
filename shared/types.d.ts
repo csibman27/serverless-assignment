@@ -18,11 +18,11 @@ export type Movie =   {
 }
 
 export type MovieReview = {
-  MovieId: number;
-  ReviewId: number;
-  ReviewerId: string;
-  ReviewDate: string;
-  Content: string;
+  MovieId: number,
+  ReviewId: number,
+  ReviewerId: string,
+  ReviewDate: string,
+  Content: string
 };
 
  
