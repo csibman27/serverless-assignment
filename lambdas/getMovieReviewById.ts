@@ -29,14 +29,16 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
         Key: { id: reviewId },
       })
     );
+    // log
     console.log("GetCommand response: ", commandOutput);
+    
     if (!commandOutput.Item) {
       return {
         statusCode: 404,
         headers: {
           "content-type": "application/json",
         },
-        body: JSON.stringify({ Message: "Invalid movie Id" }),
+        body: JSON.stringify({ Message: "Invalid review Id" }),
       };
     }
     const body = {

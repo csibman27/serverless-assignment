@@ -29,7 +29,10 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
         Key: { id: movieId },
       })
     );
+    
+    // log service
     console.log("GetCommand response: ", commandOutput);
+    
     if (!commandOutput.Item) {
       return {
         statusCode: 404,

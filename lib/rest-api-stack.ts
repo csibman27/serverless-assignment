@@ -6,7 +6,7 @@ import * as custom from "aws-cdk-lib/custom-resources";
 import { Construct } from "constructs";
 // import * as sqs from 'aws-cdk-lib/aws-sqs';
 import { generateBatch } from "../shared/util";
-import { movies } from "../seed/movies";
+import { movieReviews, movies } from "../seed/movies";
 import * as apig from "aws-cdk-lib/aws-apigateway";
 
 
@@ -20,6 +20,18 @@ export class RestAPIStack extends cdk.Stack {
       partitionKey: { name: "id", type: dynamodb.AttributeType.NUMBER },
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       tableName: "Movies",
+    });
+
+    const movieReviewsTable = new dynamodb.Table(this, "MovieReviewTable", {
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      partitionKey: { name: "movieId", type: dynamodb.AttributeType.NUMBER },
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      tableName: "MovieReview",
+    });
+
+    movieReviewsTable.addLocalSecondaryIndex({
+      indexName: "roleIx",
+      sortKey: { name: "roleName", type: dynamodb.AttributeType.STRING },
     });
 
     
@@ -38,7 +50,7 @@ export class RestAPIStack extends cdk.Stack {
           REGION: 'eu-west-1',
         },
       }
-      );
+    );
 
     const getMovieReviewByIdFn = new lambdanode.NodejsFunction(
       this,
@@ -50,35 +62,37 @@ export class RestAPIStack extends cdk.Stack {
         timeout: cdk.Duration.seconds(10),
         memorySize: 128,
         environment: {
-          TABLE_NAME: moviesTable.tableName,
+          TABLE_NAME: movieReviewsTable.tableName,
           REGION: 'eu-west-1',
         },
       }
-      );
+    );
         
-      // Custom resources
-      new custom.AwsCustomResource(this, "moviesddbInitData", {
-        onCreate: {
-          service: "DynamoDB",
-          action: "batchWriteItem",
-          parameters: {
-            RequestItems: {
-              [moviesTable.tableName]: generateBatch(movies),
-            },
+    // Custom resources
+    new custom.AwsCustomResource(this, "moviesddbInitData", {
+      onCreate: {
+        service: "DynamoDB",
+        action: "batchWriteItem",
+        parameters: {
+          RequestItems: {
+            [moviesTable.tableName]: generateBatch(movies),
+            [movieReviewsTable.tableName]: generateBatch(movieReviews),
           },
-          physicalResourceId: custom.PhysicalResourceId.of("moviesddbInitData"), //.of(Date.now().toString()),
         },
-        policy: custom.AwsCustomResourcePolicy.fromSdkCalls({
-          resources: [moviesTable.tableArn],
-        }),
-      });
+        physicalResourceId: custom.PhysicalResourceId.of("moviesddbInitData"), //.of(Date.now().toString()),
+      },
+      policy: custom.AwsCustomResourcePolicy.fromSdkCalls({
+        resources: [moviesTable.tableArn],
+        [movieReviewsTable.tableName]: generateBatch(movieReviews),
+      }),
+    });
     
     // Permissions 
-    // moviesTable.grantReadData(getMovieByIdFn)
-    // moviesTable.grantReadData(getAllMoviesFn)
+    moviesTable.grantReadData(getMovieByIdFn)
     moviesTable.grantReadData(getMovieReviewByIdFn)
+  
         
-        // REST API 
+    // REST API 
     const api = new apig.RestApi(this, "RestAPI", {
       description: "serverlesss api",
       deployOptions: {
