@@ -25,7 +25,7 @@ export class RestAPIStack extends cdk.Stack {
     const movieReviewsTable = new dynamodb.Table(this, "MovieReviewTable", {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       partitionKey: { name: "movieId", type: dynamodb.AttributeType.NUMBER },
-      sortKey: { name: "ReviewerId", type: dynamodb.AttributeType.STRING },
+      sortKey: { name: "reviewerId", type: dynamodb.AttributeType.STRING },
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       tableName: "MovieReview",
     });
@@ -68,10 +68,19 @@ export class RestAPIStack extends cdk.Stack {
         },
       }
     );
+    //console.log(getMovieReviewByIdFn)
     
     // Permissions 
     moviesTable.grantReadData(getMovieByIdFn)
-    moviesTable.grantReadData(getMovieReviewByIdFn)
+    movieReviewsTable.grantReadData(getMovieReviewByIdFn)
+
+    // create simple url 
+    const getMovieReviewByIdURL = getMovieReviewByIdFn.addFunctionUrl({
+      authType: lambda.FunctionUrlAuthType.NONE,
+      cors: {
+        allowedOrigins: ["*"],
+ },
+ });
 
      // Custom resources
      new custom.AwsCustomResource(this, "moviesddbInitData", {
@@ -84,10 +93,10 @@ export class RestAPIStack extends cdk.Stack {
             [movieReviewsTable.tableName]: generateBatch(movieReviews),
           },
         },
-        physicalResourceId: custom.PhysicalResourceId.of("moviesddbInitData"), //.of(Date.now().toString()),
+        physicalResourceId: custom.PhysicalResourceId.of(Date.now().toString()),
       },
       policy: custom.AwsCustomResourcePolicy.fromSdkCalls({
-        resources: [moviesTable.tableArn, movieReviewsTable.tableArn]
+        resources: [moviesTable.tableArn, movieReviewsTable.tableArn],
       }),
     });
   
@@ -132,6 +141,11 @@ export class RestAPIStack extends cdk.Stack {
       "GET",
       new apig.LambdaIntegration(getMovieReviewByIdFn, { proxy: true })
     );
+    
+    // simple endpoint
+    new cdk.CfnOutput(this, "Get Movie Cast Url", {
+      value: getMovieReviewByIdURL.url,
+ });
         
   }
 }
