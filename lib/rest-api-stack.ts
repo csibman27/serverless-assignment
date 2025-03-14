@@ -14,20 +14,21 @@ export class RestAPIStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    // Tables 
-    const moviesTable = new dynamodb.Table(this, "MoviesTable", {
-      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-      partitionKey: { name: "id", type: dynamodb.AttributeType.NUMBER },
-      removalPolicy: cdk.RemovalPolicy.DESTROY,
-      tableName: "Movies",
-    });
+    // Tables
+
+    // const moviesTable = new dynamodb.Table(this, "MoviesTable", {
+    //   billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+    //   partitionKey: { name: "id", type: dynamodb.AttributeType.NUMBER },
+    //   removalPolicy: cdk.RemovalPolicy.DESTROY,
+    //   tableName: "Movies",
+    // });
 
     const movieReviewsTable = new dynamodb.Table(this, "MovieReviewTable", {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       partitionKey: { name: "movieId", type: dynamodb.AttributeType.NUMBER },
       sortKey: { name: "reviewerId", type: dynamodb.AttributeType.STRING },
       removalPolicy: cdk.RemovalPolicy.DESTROY,
-      tableName: "MovieReview",
+      tableName: "MovieReviews",
     });
 
     movieReviewsTable.addLocalSecondaryIndex({
@@ -47,7 +48,7 @@ export class RestAPIStack extends cdk.Stack {
         timeout: cdk.Duration.seconds(10),
         memorySize: 128,
         environment: {
-          TABLE_NAME: moviesTable.tableName,
+          REVIEW_TABLE_NAME: movieReviewsTable.tableName,
           REGION: 'eu-west-1',
         },
       }
@@ -63,7 +64,7 @@ export class RestAPIStack extends cdk.Stack {
         timeout: cdk.Duration.seconds(10),
         memorySize: 128,
         environment: {
-          TABLE_NAME: moviesTable.tableName,
+          REVIEW_TABLE_NAME: movieReviewsTable.tableName,
           REGION: 'eu-west-1',
         },
       }
@@ -87,9 +88,9 @@ export class RestAPIStack extends cdk.Stack {
     //console.log(getMovieReviewByIdFn)
     
     // Permissions 
-    moviesTable.grantReadData(getMovieByIdFn)
+    movieReviewsTable.grantReadData(getMovieByIdFn)
     movieReviewsTable.grantReadData(getMovieReviewByIdFn)
-    moviesTable.grantReadData(getAllMovies)
+    movieReviewsTable.grantReadData(getAllMovies)
 
     // create simple url 
     const getMovieReviewByIdURL = getMovieReviewByIdFn.addFunctionUrl({
@@ -106,14 +107,14 @@ export class RestAPIStack extends cdk.Stack {
         action: "batchWriteItem",
         parameters: {
           RequestItems: {
-            [moviesTable.tableName]: generateBatch(movies),
+            [movieReviewsTable.tableName]: generateBatch(movies),
             [movieReviewsTable.tableName]: generateBatch(movieReviews),
           },
         },
         physicalResourceId: custom.PhysicalResourceId.of(Date.now().toString()),
       },
       policy: custom.AwsCustomResourcePolicy.fromSdkCalls({
-        resources: [moviesTable.tableArn, movieReviewsTable.tableArn],
+        resources: [movieReviewsTable.tableArn, movieReviewsTable.tableArn],
       }),
     });
   
