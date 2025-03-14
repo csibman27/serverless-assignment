@@ -85,12 +85,24 @@ export class RestAPIStack extends cdk.Stack {
         },
       }
     );
-    //console.log(getMovieReviewByIdFn)
+
+    const newMovieReviewFn = new lambdanode.NodejsFunction(this, "AddMovieReviewFn", {
+      architecture: lambda.Architecture.ARM_64,
+      runtime: lambda.Runtime.NODEJS_22_X,
+      entry: `${__dirname}/../lambdas/addMovieReview.ts`,
+      timeout: cdk.Duration.seconds(10),
+      memorySize: 128,
+      environment: {
+        TABLE_NAME: movieReviewsTable.tableName,
+        REGION: "eu-west-1",
+      },
+    });
     
     // Permissions 
     movieReviewsTable.grantReadData(getMovieByIdFn)
     movieReviewsTable.grantReadData(getMovieReviewByIdFn)
     movieReviewsTable.grantReadData(getAllMovies)
+    movieReviewsTable.grantReadWriteData(newMovieReviewFn)
 
     // create simple url 
     const getMovieReviewByIdURL = getMovieReviewByIdFn.addFunctionUrl({
@@ -111,10 +123,10 @@ export class RestAPIStack extends cdk.Stack {
             [movieReviewsTable.tableName]: generateBatch(movieReviews),
           },
         },
-        physicalResourceId: custom.PhysicalResourceId.of(Date.now().toString()),
+        physicalResourceId: custom.PhysicalResourceId.of("moviesddbInitData"), //.of(Date.now().toString()),
       },
       policy: custom.AwsCustomResourcePolicy.fromSdkCalls({
-        resources: [movieReviewsTable.tableArn, movieReviewsTable.tableArn],
+        resources: [movieReviewsTable.tableArn],
       }),
     });
   
@@ -133,7 +145,8 @@ export class RestAPIStack extends cdk.Stack {
       },
     });
 
-    // Endpoints
+    // Gateway endpoints
+
     // Movie endpoint
     const moviesEndpoint = api.root.addResource("movies");
     moviesEndpoint.addMethod(
@@ -159,12 +172,17 @@ export class RestAPIStack extends cdk.Stack {
       "GET",
       new apig.LambdaIntegration(getMovieReviewByIdFn, { proxy: true })
     );
+    // ADD moviereview endpoint
+    movieReviewEndpoint.addMethod(
+      "POST",
+      new apig.LambdaIntegration(newMovieReviewFn, { proxy: true })
+    );
     
-    // simple endpoint
+
+    // Simple endpoint
     new cdk.CfnOutput(this, "Get Movie Cast Url", {
       value: getMovieReviewByIdURL.url,
  });
         
   }
 }
-    

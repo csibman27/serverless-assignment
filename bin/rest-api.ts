@@ -4,4 +4,4 @@ import * as cdk from "aws-cdk-lib";
 import { RestAPIStack } from "../lib/rest-api-stack";
 
 const app = new cdk.App();
-new RestAPIStack(app, "RestAPIStack-assignment-3", { env: { region: "eu-west-1" } });
+new RestAPIStack(app, "RestAPIStack-assignment-4", { env: { region: "eu-west-1" } });
