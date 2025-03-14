@@ -165,25 +165,32 @@ export const movies : Movie[] = [
 
 export const movieReviews: MovieReview[] = [
   {
-    movieId: 101,
+    movieId: 466420,
     reviewId: 1,
     reviewerId: 'alice@example.com',
     reviewDate: '2025-01-15',
     content: 'Great movie, really enjoyed the acting and storyline!',
   },
   {
-    movieId: 102,
+    movieId: 930564,
     reviewId: 2,
     reviewerId: 'bob@example.com',
     reviewDate: '2025-01-17',
     content: 'The plot was a bit predictable, but the effects were stunning.',
   },
   {
-    movieId: 103,
+    movieId: 872585,
     reviewId: 3,
     reviewerId: 'charlie@example.com',
     reviewDate: '2025-01-18',
     content: 'Could have been better. The pacing was off and some characters felt underdeveloped.',
+  },
+  {
+    movieId: 798141,
+    reviewId: 4,
+    reviewerId: 'bron@example.com',
+    reviewDate: '2025-01-18',
+    content: 'It was good overall.',
   }
   
 ];

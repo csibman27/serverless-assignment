@@ -32,7 +32,7 @@ export class RestAPIStack extends cdk.Stack {
 
     movieReviewsTable.addLocalSecondaryIndex({
       indexName: "contentIx",
-      sortKey: { name: "Content", type: dynamodb.AttributeType.STRING },
+      sortKey: { name: "content", type: dynamodb.AttributeType.STRING },
     });
 
     
@@ -44,6 +44,22 @@ export class RestAPIStack extends cdk.Stack {
         architecture: lambda.Architecture.ARM_64,
         runtime: lambda.Runtime.NODEJS_22_X,
         entry: `${__dirname}/../lambdas/getMovieById.ts`,
+        timeout: cdk.Duration.seconds(10),
+        memorySize: 128,
+        environment: {
+          TABLE_NAME: moviesTable.tableName,
+          REGION: 'eu-west-1',
+        },
+      }
+    );
+
+    const getAllMovies = new lambdanode.NodejsFunction(
+      this,
+      "GetAllMovies",
+      {
+        architecture: lambda.Architecture.ARM_64,
+        runtime: lambda.Runtime.NODEJS_22_X,
+        entry: `${__dirname}/../lambdas/getAllMovies.ts`,
         timeout: cdk.Duration.seconds(10),
         memorySize: 128,
         environment: {
@@ -73,6 +89,7 @@ export class RestAPIStack extends cdk.Stack {
     // Permissions 
     moviesTable.grantReadData(getMovieByIdFn)
     movieReviewsTable.grantReadData(getMovieReviewByIdFn)
+    moviesTable.grantReadData(getAllMovies)
 
     // create simple url 
     const getMovieReviewByIdURL = getMovieReviewByIdFn.addFunctionUrl({
@@ -120,7 +137,7 @@ export class RestAPIStack extends cdk.Stack {
     const moviesEndpoint = api.root.addResource("movies");
     moviesEndpoint.addMethod(
       "GET",
-      new apig.LambdaIntegration(getMovieReviewByIdFn, { proxy: true })
+      new apig.LambdaIntegration(getAllMovies, { proxy: true })
     );
     // Movie ID endpoint
     const specificMovieEndpoint = moviesEndpoint.addResource("{movieId}");
