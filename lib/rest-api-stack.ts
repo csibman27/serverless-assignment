@@ -153,7 +153,7 @@ export class RestAPIStack extends cdk.Stack {
         new apig.LambdaIntegration(getMovieReviewByIdFn, { proxy: true })
     );
     // Review ID endpoint
-    const specificMovieReviewEndpoint = movieReviewEndpoint.addResource("{reviewId}");
+    const specificMovieReviewEndpoint = movieReviewEndpoint.addResource("{movieId}");
     specificMovieReviewEndpoint.addMethod(
       "GET",
       new apig.LambdaIntegration(getMovieReviewByIdFn, { proxy: true })

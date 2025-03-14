@@ -1,113 +1,84 @@
 import { APIGatewayProxyHandlerV2 } from "aws-lambda";
-import { MovieReview } from "../shared/types";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import {
-  DynamoDBDocumentClient,
-  QueryCommand,
-  QueryCommandInput,
-} from "@aws-sdk/lib-dynamodb";
-import Ajv from "ajv";
-import schema from "../shared/types.schema.json";
+import { DynamoDBDocumentClient, QueryCommand } from "@aws-sdk/lib-dynamodb";
 
-const ajv = new Ajv();
-const isValidQueryParams = ajv.compile(
-  schema.definitions["MovieReview"] || {}
-);
- 
-const ddbDocClient = createDocumentClient();
+// Initialize DynamoDB client
+const ddbDocClient = createDDbDocClient();
 
 export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
   try {
-    console.log("[EVENT]", JSON.stringify(event));
-    const queryParams = event.queryStringParameters;
-    if (!queryParams) {
+    // Print Event
+    console.log("Event: ", JSON.stringify(event));
+    const pathParameters = event?.pathParameters;
+    const movieId = pathParameters?.movieId ? parseInt(pathParameters.movieId) : undefined;
+
+    // Check if movieId is provided
+    if (!movieId) {
       return {
-        statusCode: 500,
+        statusCode: 400,
         headers: {
           "content-type": "application/json",
         },
-        body: JSON.stringify({ message: "Missing query parameters" }),
+        body: JSON.stringify({ Message: "Missing movie Id" }),
       };
     }
-    if (!isValidQueryParams(queryParams)) {
-      return {
-        statusCode: 500,
-        headers: {
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          message: `Incorrect type. Must match Query parameters schema`,
-          schema: schema.definitions["MovieReview"],
-        }),
-      };
-    }
-    
-    const reviewId = parseInt(queryParams.reviewId);
-    let commandInput: QueryCommandInput = {
-      TableName: process.env.TABLE_NAME,
-    };
-    if ("content" in queryParams) {
-      commandInput = {
-        ...commandInput,
-        IndexName: "contentIx",
-        KeyConditionExpression: "reviewId = :m and begins_with(content, :r) ",
-        ExpressionAttributeValues: {
-          ":m": reviewId,
-          ":r": queryParams.content,
-        },
-      };
-    } else if ("reviewerId" in queryParams) {
-      commandInput = {
-        ...commandInput,
-        KeyConditionExpression: "reviewId = :m and begins_with(reviewerId, :a) ",
-        ExpressionAttributeValues: {
-          ":m": reviewId,
-          ":a": queryParams.reviewerId,
-        },
-      };
-    } else {
-      commandInput = {
-        ...commandInput,
-        KeyConditionExpression: "reviewId = :m",
-        ExpressionAttributeValues: {
-          ":m": reviewId,
-        },
-      };
-    }
-    
+
+    // Query to fetch reviews for the specified movieId
     const commandOutput = await ddbDocClient.send(
-      new QueryCommand(commandInput)
-      );
-      
+      new QueryCommand({
+        TableName: process.env.REVIEW_TABLE_NAME,  // Table for reviews
+        KeyConditionExpression: "movieId = :movieId",
+        ExpressionAttributeValues: {
+          ":movieId": movieId,
+        },
+      })
+    );
+
+    // Log service response
+    console.log("QueryCommand response: ", commandOutput);
+
+    if (!commandOutput.Items || commandOutput.Items.length === 0) {
       return {
-        statusCode: 200,
+        statusCode: 404,
         headers: {
           "content-type": "application/json",
         },
-        body: JSON.stringify({
-          data: commandOutput.Items,
-        }),
-      };
-    } catch (error: any) {
-      console.log(JSON.stringify(error));
-      return {
-        statusCode: 500,
-        headers: {
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({ error }),
+        body: JSON.stringify({ Message: "No reviews found for the specified movieId" }),
       };
     }
-  };
-  
-  function createDocumentClient() {
-    const ddbClient = new DynamoDBClient({ region: process.env.REGION });
-    const marshallOptions = {
-      convertEmptyValues: true,
-      removeUndefinedValues: true,
-      convertClassInstanceToMap: true,
+
+    const body = {
+      data: commandOutput.Items,
     };
-    const unmarshallOptions = {
+
+    // Return Response
+    return {
+      statusCode: 200,
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(body),
+    };
+  } catch (error: any) {
+    console.log("Error: ", JSON.stringify(error));
+    return {
+      statusCode: 500,
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ error: "Internal Server Error" }),
+    };
+  }
+};
+
+function createDDbDocClient() {
+  const ddbClient = new DynamoDBClient({ region: process.env.REGION });
+  const marshallOptions = {
+    convertEmptyValues: true,
+    removeUndefinedValues: true,
+    convertClassInstanceToMap: true,
+  };
+  const unmarshallOptions = {
     wrapNumbers: false,
   };
   const translateConfig = { marshallOptions, unmarshallOptions };
