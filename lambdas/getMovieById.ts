@@ -24,7 +24,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
 
     const commandOutput = await ddbDocClient.send(
       new GetCommand({
-        TableName: process.env.REVIEW_TABLE_NAME,
+        TableName: process.env.TABLE_NAME,
         Key: { id: movieId },
       })
     );

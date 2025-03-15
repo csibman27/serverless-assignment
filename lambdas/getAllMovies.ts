@@ -10,7 +10,7 @@ export const handler: Handler = async (event, context) => {
 
     const commandOutput = await ddbDocClient.send(
       new ScanCommand({
-        TableName: process.env.REVIEW_TABLE_NAME,
+        TableName: process.env.TABLE_NAME,
       })
     );
 

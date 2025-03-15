@@ -26,7 +26,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
     // Query to fetch reviews for the specified movieId
     const commandOutput = await ddbDocClient.send(
       new QueryCommand({
-        TableName: process.env.REVIEW_TABLE_NAME,  // Table for reviews
+        TableName: process.env.TABLE_NAME,  // Table for reviews
         KeyConditionExpression: "movieId = :movieId",
         ExpressionAttributeValues: {
           ":movieId": movieId,

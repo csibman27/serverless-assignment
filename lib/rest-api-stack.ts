@@ -48,7 +48,7 @@ export class RestAPIStack extends cdk.Stack {
         timeout: cdk.Duration.seconds(10),
         memorySize: 128,
         environment: {
-          REVIEW_TABLE_NAME: movieReviewsTable.tableName,
+          TABLE_NAME: movieReviewsTable.tableName,
           REGION: 'eu-west-1',
         },
       }
@@ -64,7 +64,7 @@ export class RestAPIStack extends cdk.Stack {
         timeout: cdk.Duration.seconds(10),
         memorySize: 128,
         environment: {
-          REVIEW_TABLE_NAME: movieReviewsTable.tableName,
+          TABLE_NAME: movieReviewsTable.tableName,
           REGION: 'eu-west-1',
         },
       }
@@ -80,7 +80,7 @@ export class RestAPIStack extends cdk.Stack {
         timeout: cdk.Duration.seconds(10),
         memorySize: 128,
         environment: {
-          REVIEW_TABLE_NAME: movieReviewsTable.tableName,
+          TABLE_NAME: movieReviewsTable.tableName,
           REGION: 'eu-west-1',
         },
       }
@@ -97,14 +97,28 @@ export class RestAPIStack extends cdk.Stack {
         REGION: "eu-west-1",
       },
     });
+
+    const putMovieReviewFn = new lambdanode.NodejsFunction(this, "UpdateMovieReviewFn", {
+      architecture: lambda.Architecture.ARM_64,
+      runtime: lambda.Runtime.NODEJS_22_X,
+      entry: `${__dirname}/../lambdas/updateMovieReview.ts`,
+      timeout: cdk.Duration.seconds(10),
+      memorySize: 128,
+      environment: {
+        TABLE_NAME: movieReviewsTable.tableName,
+        REGION: "eu-west-1",
+      },
+    });
+
     
     // Permissions 
     movieReviewsTable.grantReadData(getMovieByIdFn)
     movieReviewsTable.grantReadData(getMovieReviewByIdFn)
     movieReviewsTable.grantReadData(getAllMovies)
     movieReviewsTable.grantReadWriteData(newMovieReviewFn)
+    movieReviewsTable.grantReadWriteData(putMovieReviewFn)
 
-    // create simple url 
+    // create simple function url 
     const getMovieReviewByIdURL = getMovieReviewByIdFn.addFunctionUrl({
       authType: lambda.FunctionUrlAuthType.NONE,
       cors: {
@@ -177,9 +191,22 @@ export class RestAPIStack extends cdk.Stack {
       "POST",
       new apig.LambdaIntegration(newMovieReviewFn, { proxy: true })
     );
-    
+    // PUT moviereview endpoint   PUT /movies/{movieId}/reviews/
+    const specificReviewEndpoint = specificMovieEndpoint.addResource("reviews")
 
-    // Simple endpoint
+    specificReviewEndpoint.addMethod(
+      "PUT",
+      new apig.LambdaIntegration(putMovieReviewFn, { proxy: true })
+    );
+    // PUT /movies/{movieId}/reviews/{reviewId} - Update the text of a review.
+    const specificReviewIdEndpoint = specificReviewEndpoint.addResource("{reviewId}")
+
+    specificReviewIdEndpoint.addMethod(
+      "PUT",
+      new apig.LambdaIntegration(putMovieReviewFn, { proxy: true })
+    );
+
+    // Simple URL endpoint
     new cdk.CfnOutput(this, "Get Movie Cast Url", {
       value: getMovieReviewByIdURL.url,
  });
