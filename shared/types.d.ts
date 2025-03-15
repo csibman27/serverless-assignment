@@ -20,8 +20,8 @@ export type Movie =   {
 export type MovieReview = {
   movieId: number,
   reviewId: number,
-  reviewerId?: string,
-  reviewDate: string,
+  reviewerId: string,
+  reviewDate?: string,
   content?: string
 };
 

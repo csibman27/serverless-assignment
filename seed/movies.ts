@@ -1,4 +1,5 @@
 import {Movie, MovieReview} from '../shared/types'
+import { generateRandomInt } from '../shared/util';
 
 export const movies : Movie[] = [
   {
@@ -166,28 +167,28 @@ export const movies : Movie[] = [
 export const movieReviews: MovieReview[] = [
   {
     movieId: 466420,
-    reviewId: 1,
+    reviewId: generateRandomInt(10000, 99999),
     reviewerId: 'alice@example.com',
     reviewDate: '2025-01-15',
     content: 'Great movie, really enjoyed the acting and storyline!',
   },
   {
     movieId: 930564,
-    reviewId: 2,
+    reviewId: generateRandomInt(10000, 99999),
     reviewerId: 'bob@example.com',
     reviewDate: '2025-01-17',
     content: 'The plot was a bit predictable, but the effects were stunning.',
   },
   {
     movieId: 872585,
-    reviewId: 3,
+    reviewId: generateRandomInt(10000, 99999),
     reviewerId: 'charlie@example.com',
     reviewDate: '2025-01-18',
     content: 'Could have been better. The pacing was off and some characters felt underdeveloped.',
   },
   {
     movieId: 798141,
-    reviewId: 4,
+    reviewId: generateRandomInt(10000, 99999),
     reviewerId: 'bron@example.com',
     reviewDate: '2025-01-18',
     content: 'It was good overall.',
