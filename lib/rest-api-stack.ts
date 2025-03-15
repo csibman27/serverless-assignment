@@ -6,7 +6,7 @@ import * as custom from "aws-cdk-lib/custom-resources";
 import { Construct } from "constructs";
 // import * as sqs from 'aws-cdk-lib/aws-sqs';
 import { generateBatch } from "../shared/util";
-import { movieReviews, movies } from "../seed/movies";
+import { movieReviews } from "../seed/movies";
 import * as apig from "aws-cdk-lib/aws-apigateway";
 
 
@@ -26,7 +26,7 @@ export class RestAPIStack extends cdk.Stack {
     const movieReviewsTable = new dynamodb.Table(this, "MovieReviewTable", {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       partitionKey: { name: "movieId", type: dynamodb.AttributeType.NUMBER },
-      sortKey: { name: "reviewerId", type: dynamodb.AttributeType.STRING },
+      sortKey: { name: "reviewId", type: dynamodb.AttributeType.NUMBER },
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       tableName: "MovieReviews",
     });
@@ -133,7 +133,7 @@ export class RestAPIStack extends cdk.Stack {
         action: "batchWriteItem",
         parameters: {
           RequestItems: {
-            [movieReviewsTable.tableName]: generateBatch(movies),
+            //[movieReviewsTable.tableName]: generateBatch(movies),
             [movieReviewsTable.tableName]: generateBatch(movieReviews),
           },
         },

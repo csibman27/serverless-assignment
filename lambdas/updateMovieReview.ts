@@ -1,95 +1,114 @@
-import { Handler } from "aws-lambda";
+// import Ajv from "ajv";
+// import schema from "../shared/types.schema.json";
+import { APIGatewayProxyHandlerV2 } from "aws-lambda";
 import { DynamoDBClient, UpdateItemCommand } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, UpdateCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, UpdateCommand, PutCommandInput } from "@aws-sdk/lib-dynamodb";
+
+
+// const ajv = new Ajv();
+// const isValidBodyParams = ajv.compile(schema.definitions["MovieReview"] || {});
+
 
 const ddbDocClient = createDDbDocClient();
 
-export const handler: Handler = async (event, context) => {
+export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
   try {
     console.log("Event: ", JSON.stringify(event));
 
-    // Get the ID from the path parameters or the event
-    const { id } = event.pathParameters || {}; // Ensure the id is passed as part of the URL
+    // Get movieId and reviewId from the path parameters or the event
+    const { movieId, reviewId, reviewerId, content } = event.pathParameters || {}; // Ensure the movieId is passed as part of the URL
 
-    if (!id) {
+    if (!movieId || !reviewId) {
       return {
         statusCode: 400,
         headers: {
           "content-type": "application/json",
         },
-        body: JSON.stringify({ Message: "ID parameter is required" }),
+        body: JSON.stringify({ Message: "both ID parameters is required" }),
       };
     }
 
-    const requestBody = JSON.parse(event.body || '{}');
-
-    if (!requestBody || Object.keys(requestBody).length === 0) {
+    // Parse the request body
+    const body = event.body ? JSON.parse(event.body) : undefined;
+    if (!body) {
       return {
-        statusCode: 400,
+        statusCode: 400, // Bad request if body is missing
         headers: {
           "content-type": "application/json",
         },
-        body: JSON.stringify({ Message: "Request body is empty or invalid" }),
+        body: JSON.stringify({ message: "Missing request body" }),
       };
     }
 
-    const updateExpression = buildUpdateExpression(requestBody);
-    const expressionAttributeValues = buildExpressionAttributeValues(requestBody);
+    // if (!isValidBodyParams(body)) {
+    //   return {
+    //     statusCode: 500,
+    //     headers: {
+    //       "content-type": "application/json",
+    //     },
+    //     body: JSON.stringify({
+    //       message: `Incorrect type. Must match the MovieReview schema`,
+    //       schema: schema.definitions["MovieReview"],
+    //     }),
+    //   };
+    // }
 
-    // Update the DB
+    // Validate the content you want to update (e.g., content field)
+    const { review } = body;
+    if (!review) {
+      return {
+        statusCode: 400, // Bad request if the content content is missing
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ message: `Missing ${review}content to update` }),
+      };
+    }
+
+    // Prepare the update parameters
     const updateParams = {
       TableName: process.env.TABLE_NAME,
-      Key: { id },
-      UpdateExpression: updateExpression,
-      ExpressionAttributeValues: expressionAttributeValues,
+      Key: { 
+        movieId,
+        reviewId,
+      }, // Use movieId and reviewId to locate the item
+      UpdateExpression: "set content = :content", // Only updating the content field
+      ConditionExpression: "reviewerId = :reviewerId",
+      ExpressionAttributeValues: {
+        ":content": content,
+        ":reviewerId": reviewerId,
+      },
       ReturnValues: "ALL_NEW", // updated item
     };
+    // logging
+    console.log(updateParams)
+    console.log(process.env.TABLE_NAME)
 
-    const commandOutput = await ddbDocClient.send(new UpdateItemCommand(updateParams));
-
-    if (!commandOutput.Attributes) {
-      return {
-        statusCode: 404,
-        headers: {
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({ Message: "Item not found" }),
-      };
-    }
+    // Execute the update command
+    const commandOutput = await ddbDocClient.send(new UpdateCommand(updateParams));
 
     return {
-      statusCode: 200,
+      statusCode: 200, // OK response
       headers: {
-        "content-type": "application/json",
+        "content-type": "application/json"
       },
-      body: JSON.stringify({ updatedItem: commandOutput.Attributes }),
+      body: JSON.stringify({
+        message: "Review updated successfully",
+        updatedReview: commandOutput.Attributes,
+      }),
     };
   } catch (error: any) {
-    console.log(JSON.stringify(error));
+    console.log("Error:", JSON.stringify(error));
+
     return {
       statusCode: 500,
       headers: {
         "content-type": "application/json",
       },
-      body: JSON.stringify({ error }),
+      body: JSON.stringify({ error: error.message || "Internal server error" }),
     };
   }
 };
-
-// build the update expression dynamically based on the body
-function buildUpdateExpression(requestBody: Record<string, any>): string {
-  const updateFields = Object.keys(requestBody).map((key) => `#${key} = :${key}`);
-  return `SET ${updateFields.join(", ")}`;
-}
-
-// map values for the update expression
-function buildExpressionAttributeValues(requestBody: Record<string, any>): Record<string, any> {
-  const expressionAttributeValues: Record<string, any> = {};
-  Object.keys(requestBody).forEach((key) => {
-    expressionAttributeValues[`:${key}`] = requestBody[key];
-  });
-  return expressionAttributeValues;
-}
 
 function createDDbDocClient() {
   const ddbClient = new DynamoDBClient({ region: process.env.REGION });
