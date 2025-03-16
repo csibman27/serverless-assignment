@@ -16,13 +16,6 @@ export class RestAPIStack extends cdk.Stack {
 
     // Tables
 
-    // const moviesTable = new dynamodb.Table(this, "MoviesTable", {
-    //   billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-    //   partitionKey: { name: "id", type: dynamodb.AttributeType.NUMBER },
-    //   removalPolicy: cdk.RemovalPolicy.DESTROY,
-    //   tableName: "Movies",
-    // });
-
     const movieReviewsTable = new dynamodb.Table(this, "MovieReviewTable", {
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       partitionKey: { name: "movieId", type: dynamodb.AttributeType.NUMBER },
