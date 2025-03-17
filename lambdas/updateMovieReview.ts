@@ -37,17 +37,41 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
         movieId: movieId,
         reviewId: reviewId,
       },
-      UpdateExpression: "set content = :content, #date = :date",
-      ExpressionAttributeValues: {
-        ":content": body.content,
-        ":date": body.content,
-      },
+      UpdateExpression: "",
+      ExpressionAttributeValues: {},
       ReturnValues: "ALL_NEW",
     };
+
+    if (body.content) {
+      updateParams.UpdateExpression += "set content = :content";
+      updateParams.ExpressionAttributeValues[":content"] = body.content;
+    }
+
+    if (body.reviewDate) {
+      if (updateParams.UpdateExpression) {
+        updateParams.UpdateExpression += ", ";
+      } else {
+        updateParams.UpdateExpression += "set ";
+      }
+      updateParams.UpdateExpression += "reviewDate = :reviewDate";
+      updateParams.ExpressionAttributeValues[":reviewDate"] = body.reviewDate;
+    }
 
     // logging what is pushed to table
     // console.log(process.env.TABLE_NAME)
     // console.log("updateparams: ", JSON.stringify(updateParams))
+
+    if (!body.content && !body.reviewDate) {
+      return {
+        statusCode: 400,
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          message: "At least one of 'content' or 'reviewDate' is required in request body",
+        }),
+      };
+    }
 
     const commandOutput = await ddbDocClient.send(
       new UpdateCommand(updateParams)
