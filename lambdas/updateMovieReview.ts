@@ -37,16 +37,17 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
         movieId: movieId,
         reviewId: reviewId,
       },
-      UpdateExpression: "set content = :content",
+      UpdateExpression: "set content = :content, #date = :date",
       ExpressionAttributeValues: {
         ":content": body.content,
+        ":date": body.content,
       },
       ReturnValues: "ALL_NEW",
     };
 
     // logging what is pushed to table
     // console.log(process.env.TABLE_NAME)
-    // console.log(updateParams)
+    // console.log("updateparams: ", JSON.stringify(updateParams))
 
     const commandOutput = await ddbDocClient.send(
       new UpdateCommand(updateParams)

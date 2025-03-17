@@ -42,14 +42,6 @@ export class RestAPIStack extends cdk.Stack {
       },
     });
 
-    const appApi = new apig.RestApi(this, "AppApi", {
-      description: "App RestApi",
-      endpointTypes: [apig.EndpointType.REGIONAL],
-      defaultCorsPreflightOptions: {
-        allowOrigins: apig.Cors.ALL_ORIGINS,
-      },
-    });
-
     // Tables
 
     const movieReviewsTable = new dynamodb.Table(this, "MovieReviewTable", {
