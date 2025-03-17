@@ -10,6 +10,20 @@ export const movieReviews: MovieReview[] = [
     content: 'Great movie, really enjoyed the acting and storyline!',
   },
   {
+    movieId: 466420,
+    reviewId: generateRandomInt(10000, 99999),
+    reviewerId: 'renato@example.com',
+    reviewDate: '2025-01-11',
+    content: 'An amazing experience',
+  },
+  {
+    movieId: 466420,
+    reviewId: generateRandomInt(10000, 99999),
+    reviewerId: 'william@example.com',
+    reviewDate: '2025-01-14',
+    content: 'The storyline was quite predictable.',
+  },
+  {
     movieId: 930564,
     reviewId: generateRandomInt(10000, 99999),
     reviewerId: 'bob@example.com',

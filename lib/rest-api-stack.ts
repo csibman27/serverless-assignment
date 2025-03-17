@@ -195,53 +195,54 @@ export class RestAPIStack extends cdk.Stack {
       value: getMovieReviewByIdURL.url,
  });
 
- this.auth = authApi.root.addResource("auth");
+    // Authentication endpoint
+    this.auth = authApi.root.addResource("auth");
 
- // NEW
- this.addAuthRoute(
-   "signup",
-   "POST",
-   "SignupFn",
-   'signup.ts'
- );
 
- // NEW
- this.addAuthRoute(
-   "confirm_signup",
-   "POST",
-   "ConfirmFn",
-   "confirm-signup.ts"
- );
-}
-// NEW
-private addAuthRoute(
- resourceName: string,
- method: string,
- fnName: string,
- fnEntry: string,
- allowCognitoAccess?: boolean
-): void {
- const commonFnProps = {
-   architecture: lambda.Architecture.ARM_64,
-   timeout: cdk.Duration.seconds(10),
-   memorySize: 128,
-   runtime: lambda.Runtime.NODEJS_22_X,
-   handler: "handler",
-   environment: {
-     USER_POOL_ID: this.userPoolId,
-     CLIENT_ID: this.userPoolClientId,
-     REGION: cdk.Aws.REGION
-   },
- };
- 
- const resource = this.auth.addResource(resourceName);
- 
- const fn = new node.NodejsFunction(this, fnName, {
-   ...commonFnProps,
-   entry: `${__dirname}/../lambdas/auth/${fnEntry}`,
- });
+    this.addAuthRoute(
+      "signup",
+      "POST",
+      "SignupFn",
+      'signup.ts'
+    );
 
- resource.addMethod(method, new apig.LambdaIntegration(fn));
-}  // end private method
+
+    this.addAuthRoute(
+      "confirm_signup",
+      "POST",
+      "ConfirmFn",
+      "confirm-signup.ts"
+    );
+    }
+
+    private addAuthRoute(
+    resourceName: string,
+    method: string,
+    fnName: string,
+    fnEntry: string,
+    allowCognitoAccess?: boolean
+    ): void {
+    const commonFnProps = {
+      architecture: lambda.Architecture.ARM_64,
+      timeout: cdk.Duration.seconds(10),
+      memorySize: 128,
+      runtime: lambda.Runtime.NODEJS_22_X,
+      handler: "handler",
+      environment: {
+        USER_POOL_ID: this.userPoolId,
+        CLIENT_ID: this.userPoolClientId,
+        REGION: cdk.Aws.REGION
+      },
+    };
+    
+    const resource = this.auth.addResource(resourceName);
+    
+    const fn = new node.NodejsFunction(this, fnName, {
+      ...commonFnProps,
+      entry: `${__dirname}/../lambdas/auth/${fnEntry}`,
+    });
+
+    resource.addMethod(method, new apig.LambdaIntegration(fn));
+    }  // end private method
         
 }
