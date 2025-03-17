@@ -93,6 +93,8 @@ export class RestAPIStack extends cdk.Stack {
         memorySize: 128,
         environment: {
           TABLE_NAME: movieReviewsTable.tableName,
+          USER_POOL_ID: this.userPoolId,
+          CLIENT_ID: this.userPoolClientId,
           REGION: "eu-west-1",
         },
       }
@@ -109,12 +111,14 @@ export class RestAPIStack extends cdk.Stack {
         memorySize: 128,
         environment: {
           TABLE_NAME: movieReviewsTable.tableName,
+          USER_POOL_ID: this.userPoolId,
+          CLIENT_ID: this.userPoolClientId,
           REGION: "eu-west-1",
         },
       }
     );
 
-    // Protected functions and routes
+    // Authorizer lambda
 
     const appCommonFnProps = {
       architecture: lambda.Architecture.ARM_64,
@@ -129,54 +133,10 @@ export class RestAPIStack extends cdk.Stack {
       },
     };
 
-    const protectedRes = appApi.root.addResource("protected");
-
-    const publicRes = appApi.root.addResource("public");
-
-    const protectedFn = new node.NodejsFunction(this, "ProtectedFn", {
-      ...appCommonFnProps,
-      entry: "./lambdas/protected.ts",
-    });
-
-    const publicFn = new node.NodejsFunction(this, "PublicFn", {
-      ...appCommonFnProps,
-      entry: "./lambdas/public.ts",
-    });
-
-    const authorizerFn = new node.NodejsFunction(this, "AuthorizerFn", {
-      ...appCommonFnProps,
-      entry: "./lambdas/auth/authorizer.ts",
-    });
-
-    const requestAuthorizer = new apig.RequestAuthorizer(
-      this,
-      "RequestAuthorizer",
-      {
-        identitySources: [apig.IdentitySource.header("cookie")],
-        handler: authorizerFn,
-        resultsCacheTtl: cdk.Duration.minutes(0),
-      }
-    );
-
-    protectedRes.addMethod("GET", new apig.LambdaIntegration(protectedFn), {
-      authorizer: requestAuthorizer,
-      authorizationType: apig.AuthorizationType.CUSTOM,
-    });
-
-    publicRes.addMethod("GET", new apig.LambdaIntegration(publicFn));
-
     // Permissions
     movieReviewsTable.grantReadData(getMovieReviewByIdFn);
     movieReviewsTable.grantReadWriteData(newMovieReviewFn);
     movieReviewsTable.grantReadWriteData(putMovieReviewFn);
-
-    // create simple function url
-    const getMovieReviewByIdURL = getMovieReviewByIdFn.addFunctionUrl({
-      authType: lambda.FunctionUrlAuthType.NONE,
-      cors: {
-        allowedOrigins: ["*"],
-      },
-    });
 
     // Custom resources
     new custom.AwsCustomResource(this, "moviesddbInitData", {
@@ -209,6 +169,21 @@ export class RestAPIStack extends cdk.Stack {
       },
     });
 
+    const authorizerFn = new node.NodejsFunction(this, "AuthorizerFn2", {
+      ...appCommonFnProps,
+      entry: "./lambdas/auth/authorizer.ts",
+    });
+
+    const requestAuthorizer = new apig.RequestAuthorizer(
+      this,
+      "RequestAuthorizer",
+      {
+        identitySources: [apig.IdentitySource.header("cookie")],
+        handler: authorizerFn,
+        resultsCacheTtl: cdk.Duration.minutes(0),
+      }
+    );
+
     // Gateway endpoints
 
     // Movie endpoint
@@ -234,7 +209,11 @@ export class RestAPIStack extends cdk.Stack {
     // ADD moviereview endpoint
     movieReviewEndpoint.addMethod(
       "POST",
-      new apig.LambdaIntegration(newMovieReviewFn, { proxy: true })
+      new apig.LambdaIntegration(newMovieReviewFn, { proxy: true }),
+      {
+        authorizer: requestAuthorizer,
+        authorizationType: apig.AuthorizationType.CUSTOM,
+      }
     );
     // PUT moviereview endpoint   PUT /movies/{movieId}/reviews/
     const specificReviewEndpoint = specificMovieEndpoint.addResource("reviews");
@@ -249,13 +228,12 @@ export class RestAPIStack extends cdk.Stack {
 
     specificReviewIdEndpoint.addMethod(
       "PUT",
-      new apig.LambdaIntegration(putMovieReviewFn, { proxy: true })
+      new apig.LambdaIntegration(putMovieReviewFn, { proxy: true }),
+      {
+        authorizer: requestAuthorizer,
+        authorizationType: apig.AuthorizationType.CUSTOM,
+      }
     );
-
-    // Simple URL endpoint
-    new cdk.CfnOutput(this, "Get Movie Cast Url", {
-      value: getMovieReviewByIdURL.url,
-    });
 
     // Authentication endpoint
     this.auth = authApi.root.addResource("auth");
