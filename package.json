@@ -2,8 +2,7 @@
   "name": "rest-api-moviesapp",
   "version": "0.1.0",
   "bin": {
-    "rest-api-moviesapp": "bin/rest-api-moviesapp.js",
-    "aws-serverless-auth": "bin/aws-serverless-auth.js"
+    "rest-api-moviesapp": "bin/rest-api-moviesapp.js"
   },
   "scripts": {
     "build": "tsc",

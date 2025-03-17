@@ -42,6 +42,14 @@ export class RestAPIStack extends cdk.Stack {
       },
     });
 
+    const appApi = new apig.RestApi(this, "AppApi", {
+      description: "App RestApi",
+      endpointTypes: [apig.EndpointType.REGIONAL],
+      defaultCorsPreflightOptions: {
+        allowOrigins: apig.Cors.ALL_ORIGINS,
+      },
+    });
+
     // Tables
 
     const movieReviewsTable = new dynamodb.Table(this, "MovieReviewTable", {
@@ -105,6 +113,57 @@ export class RestAPIStack extends cdk.Stack {
         },
       }
     );
+
+    // Protected functions and routes
+
+    const appCommonFnProps = {
+      architecture: lambda.Architecture.ARM_64,
+      timeout: cdk.Duration.seconds(10),
+      memorySize: 128,
+      runtime: lambda.Runtime.NODEJS_22_X,
+      handler: "handler",
+      environment: {
+        USER_POOL_ID: this.userPoolId,
+        CLIENT_ID: this.userPoolClientId,
+        REGION: cdk.Aws.REGION,
+      },
+    };
+
+    const protectedRes = appApi.root.addResource("protected");
+
+    const publicRes = appApi.root.addResource("public");
+
+    const protectedFn = new node.NodejsFunction(this, "ProtectedFn", {
+      ...appCommonFnProps,
+      entry: "./lambdas/protected.ts",
+    });
+
+    const publicFn = new node.NodejsFunction(this, "PublicFn", {
+      ...appCommonFnProps,
+      entry: "./lambdas/public.ts",
+    });
+
+    const authorizerFn = new node.NodejsFunction(this, "AuthorizerFn", {
+      ...appCommonFnProps,
+      entry: "./lambdas/auth/authorizer.ts",
+    });
+
+    const requestAuthorizer = new apig.RequestAuthorizer(
+      this,
+      "RequestAuthorizer",
+      {
+        identitySources: [apig.IdentitySource.header("cookie")],
+        handler: authorizerFn,
+        resultsCacheTtl: cdk.Duration.minutes(0),
+      }
+    );
+
+    protectedRes.addMethod("GET", new apig.LambdaIntegration(protectedFn), {
+      authorizer: requestAuthorizer,
+      authorizationType: apig.AuthorizationType.CUSTOM,
+    });
+
+    publicRes.addMethod("GET", new apig.LambdaIntegration(publicFn));
 
     // Permissions
     movieReviewsTable.grantReadData(getMovieReviewByIdFn);
@@ -210,10 +269,11 @@ export class RestAPIStack extends cdk.Stack {
       "confirm-signup.ts"
     );
 
-    this.addAuthRoute('signout', 'GET', 'SignoutFn', 'signout.ts');
-    this.addAuthRoute('signin', 'POST', 'SigninFn', 'signin.ts');
+    this.addAuthRoute("signout", "GET", "SignoutFn", "signout.ts");
+    this.addAuthRoute("signin", "POST", "SigninFn", "signin.ts");
   }
 
+  // Needs to be a separated API
   private addAuthRoute(
     resourceName: string,
     method: string,

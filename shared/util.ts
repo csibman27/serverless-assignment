@@ -16,6 +16,6 @@ export const generateBatch = (data: Entity[]) => {
   });
 };
 
-export const generateRandomInt = (min: number, max: number): number =>
+export const generateRandomInt = (min: number, max: number): number => 
   Math.floor(Math.random() * (max - min + 1)) + min;
 // console.log(generateRandomInt(10000, 99999));
