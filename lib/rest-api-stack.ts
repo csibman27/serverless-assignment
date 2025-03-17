@@ -11,7 +11,6 @@ import * as apig from "aws-cdk-lib/aws-apigateway";
 import { UserPool } from "aws-cdk-lib/aws-cognito";
 import * as node from "aws-cdk-lib/aws-lambda-nodejs";
 
-
 export class RestAPIStack extends cdk.Stack {
   private auth: apig.IResource;
   private userPoolId: string;
@@ -43,8 +42,6 @@ export class RestAPIStack extends cdk.Stack {
       },
     });
 
-    
-
     // Tables
 
     const movieReviewsTable = new dynamodb.Table(this, "MovieReviewTable", {
@@ -60,8 +57,7 @@ export class RestAPIStack extends cdk.Stack {
       sortKey: { name: "content", type: dynamodb.AttributeType.STRING },
     });
 
-    
-    // Functions 
+    // Functions
     const getMovieReviewByIdFn = new lambdanode.NodejsFunction(
       this,
       "GetMovieReviewByIdFn",
@@ -73,51 +69,58 @@ export class RestAPIStack extends cdk.Stack {
         memorySize: 128,
         environment: {
           TABLE_NAME: movieReviewsTable.tableName,
-          REGION: 'eu-west-1',
+          REGION: "eu-west-1",
         },
       }
     );
 
-    const newMovieReviewFn = new lambdanode.NodejsFunction(this, "AddMovieReviewFn", {
-      architecture: lambda.Architecture.ARM_64,
-      runtime: lambda.Runtime.NODEJS_22_X,
-      entry: `${__dirname}/../lambdas/addMovieReview.ts`,
-      timeout: cdk.Duration.seconds(10),
-      memorySize: 128,
-      environment: {
-        TABLE_NAME: movieReviewsTable.tableName,
-        REGION: "eu-west-1",
-      },
-    });
+    const newMovieReviewFn = new lambdanode.NodejsFunction(
+      this,
+      "AddMovieReviewFn",
+      {
+        architecture: lambda.Architecture.ARM_64,
+        runtime: lambda.Runtime.NODEJS_22_X,
+        entry: `${__dirname}/../lambdas/addMovieReview.ts`,
+        timeout: cdk.Duration.seconds(10),
+        memorySize: 128,
+        environment: {
+          TABLE_NAME: movieReviewsTable.tableName,
+          REGION: "eu-west-1",
+        },
+      }
+    );
 
-    const putMovieReviewFn = new lambdanode.NodejsFunction(this, "UpdateMovieReviewFn", {
-      architecture: lambda.Architecture.ARM_64,
-      runtime: lambda.Runtime.NODEJS_22_X,
-      entry: `${__dirname}/../lambdas/updateMovieReview.ts`,
-      timeout: cdk.Duration.seconds(10),
-      memorySize: 128,
-      environment: {
-        TABLE_NAME: movieReviewsTable.tableName,
-        REGION: "eu-west-1",
-      },
-    });
+    const putMovieReviewFn = new lambdanode.NodejsFunction(
+      this,
+      "UpdateMovieReviewFn",
+      {
+        architecture: lambda.Architecture.ARM_64,
+        runtime: lambda.Runtime.NODEJS_22_X,
+        entry: `${__dirname}/../lambdas/updateMovieReview.ts`,
+        timeout: cdk.Duration.seconds(10),
+        memorySize: 128,
+        environment: {
+          TABLE_NAME: movieReviewsTable.tableName,
+          REGION: "eu-west-1",
+        },
+      }
+    );
 
-    
-    // Permissions 
-    movieReviewsTable.grantReadData(getMovieReviewByIdFn)
-    movieReviewsTable.grantReadWriteData(newMovieReviewFn)
-    movieReviewsTable.grantReadWriteData(putMovieReviewFn)
+    // Permissions
+    movieReviewsTable.grantReadData(getMovieReviewByIdFn);
+    movieReviewsTable.grantReadWriteData(newMovieReviewFn);
+    movieReviewsTable.grantReadWriteData(putMovieReviewFn);
 
-    // create simple function url 
+    // create simple function url
     const getMovieReviewByIdURL = getMovieReviewByIdFn.addFunctionUrl({
       authType: lambda.FunctionUrlAuthType.NONE,
       cors: {
         allowedOrigins: ["*"],
- },
- });
+      },
+    });
 
-     // Custom resources
-     new custom.AwsCustomResource(this, "moviesddbInitData", {
+    // Custom resources
+    new custom.AwsCustomResource(this, "moviesddbInitData", {
       onCreate: {
         service: "DynamoDB",
         action: "batchWriteItem",
@@ -132,9 +135,8 @@ export class RestAPIStack extends cdk.Stack {
         resources: [movieReviewsTable.tableArn],
       }),
     });
-  
-        
-    // REST API 
+
+    // REST API
     const api = new apig.RestApi(this, "RestAPI", {
       description: "serverlesss api",
       deployOptions: {
@@ -152,19 +154,20 @@ export class RestAPIStack extends cdk.Stack {
 
     // Movie endpoint
     const moviesEndpoint = api.root.addResource("movies");
-    
+
     // Movie ID endpoint
     const specificMovieEndpoint = moviesEndpoint.addResource("{movieId}");
-  
+
     // endpoint for movie review
     const movieReviewEndpoint = moviesEndpoint.addResource("reviews");
 
     movieReviewEndpoint.addMethod(
-        "GET",
-        new apig.LambdaIntegration(getMovieReviewByIdFn, { proxy: true })
+      "GET",
+      new apig.LambdaIntegration(getMovieReviewByIdFn, { proxy: true })
     );
     // Review ID endpoint
-    const specificMovieReviewEndpoint = movieReviewEndpoint.addResource("{movieId}");
+    const specificMovieReviewEndpoint =
+      movieReviewEndpoint.addResource("{movieId}");
     specificMovieReviewEndpoint.addMethod(
       "GET",
       new apig.LambdaIntegration(getMovieReviewByIdFn, { proxy: true })
@@ -175,37 +178,30 @@ export class RestAPIStack extends cdk.Stack {
       new apig.LambdaIntegration(newMovieReviewFn, { proxy: true })
     );
     // PUT moviereview endpoint   PUT /movies/{movieId}/reviews/
-    const specificReviewEndpoint = specificMovieEndpoint.addResource("reviews")
+    const specificReviewEndpoint = specificMovieEndpoint.addResource("reviews");
 
     specificReviewEndpoint.addMethod(
       "PUT",
       new apig.LambdaIntegration(putMovieReviewFn, { proxy: true })
     );
     // PUT /movies/{movieId}/reviews/{reviewId} - Update the text of a review.
-    const specificReviewIdEndpoint = specificReviewEndpoint.addResource("{reviewId}")
+    const specificReviewIdEndpoint =
+      specificReviewEndpoint.addResource("{reviewId}");
 
     specificReviewIdEndpoint.addMethod(
       "PUT",
       new apig.LambdaIntegration(putMovieReviewFn, { proxy: true })
     );
-    
 
     // Simple URL endpoint
     new cdk.CfnOutput(this, "Get Movie Cast Url", {
       value: getMovieReviewByIdURL.url,
- });
+    });
 
     // Authentication endpoint
     this.auth = authApi.root.addResource("auth");
 
-
-    this.addAuthRoute(
-      "signup",
-      "POST",
-      "SignupFn",
-      'signup.ts'
-    );
-
+    this.addAuthRoute("signup", "POST", "SignupFn", "signup.ts");
 
     this.addAuthRoute(
       "confirm_signup",
@@ -213,15 +209,15 @@ export class RestAPIStack extends cdk.Stack {
       "ConfirmFn",
       "confirm-signup.ts"
     );
-    }
+  }
 
-    private addAuthRoute(
+  private addAuthRoute(
     resourceName: string,
     method: string,
     fnName: string,
     fnEntry: string,
     allowCognitoAccess?: boolean
-    ): void {
+  ): void {
     const commonFnProps = {
       architecture: lambda.Architecture.ARM_64,
       timeout: cdk.Duration.seconds(10),
@@ -231,18 +227,17 @@ export class RestAPIStack extends cdk.Stack {
       environment: {
         USER_POOL_ID: this.userPoolId,
         CLIENT_ID: this.userPoolClientId,
-        REGION: cdk.Aws.REGION
+        REGION: cdk.Aws.REGION,
       },
     };
-    
+
     const resource = this.auth.addResource(resourceName);
-    
+
     const fn = new node.NodejsFunction(this, fnName, {
       ...commonFnProps,
       entry: `${__dirname}/../lambdas/auth/${fnEntry}`,
     });
 
     resource.addMethod(method, new apig.LambdaIntegration(fn));
-    }  // end private method
-        
+  } // end private method
 }

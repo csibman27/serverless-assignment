@@ -7,14 +7,14 @@ const ddbDocClient = createDDbDocClient();
 export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
   try {
     console.log("[EVENT]", JSON.stringify(event));
-    
+
     // extract movieId and reviewId from the URL parameters
-    const movieId = parseInt(event.pathParameters?.movieId || '');
-    const reviewId = parseInt(event.pathParameters?.reviewId || '');
+    const movieId = parseInt(event.pathParameters?.movieId || "");
+    const reviewId = parseInt(event.pathParameters?.reviewId || "");
 
     // console.log(movieId)
     // console.log(reviewId)
-    
+
     // parse request body for updated content
     const body = event.body ? JSON.parse(event.body) : undefined;
     if (!body || !body.content) {
@@ -23,7 +23,9 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
         headers: {
           "content-type": "application/json",
         },
-        body: JSON.stringify({ message: "Missing 'content' field in request body" }),
+        body: JSON.stringify({
+          message: "Missing 'content' field in request body",
+        }),
       };
     }
     // console.log(body)
@@ -46,8 +48,10 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
     // console.log(process.env.TABLE_NAME)
     // console.log(updateParams)
 
-    const commandOutput = await ddbDocClient.send(new UpdateCommand(updateParams));
-    
+    const commandOutput = await ddbDocClient.send(
+      new UpdateCommand(updateParams)
+    );
+
     return {
       statusCode: 200,
       headers: {
@@ -65,7 +69,10 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
       headers: {
         "content-type": "application/json",
       },
-      body: JSON.stringify({ error: "Failed to update movie review", details: error.message }),
+      body: JSON.stringify({
+        error: "Failed to update movie review",
+        details: error.message,
+      }),
     };
   }
 };

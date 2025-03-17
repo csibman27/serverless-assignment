@@ -10,7 +10,9 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
     // Print Event
     console.log("Event: ", JSON.stringify(event));
     const pathParameters = event?.pathParameters;
-    const movieId = pathParameters?.movieId ? parseInt(pathParameters.movieId) : undefined;
+    const movieId = pathParameters?.movieId
+      ? parseInt(pathParameters.movieId)
+      : undefined;
 
     // Check if movieId is provided
     if (!movieId) {
@@ -26,7 +28,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
     // Query to fetch reviews for the specified movieId
     const commandOutput = await ddbDocClient.send(
       new QueryCommand({
-        TableName: process.env.TABLE_NAME,  // Table for reviews
+        TableName: process.env.TABLE_NAME, // Table for reviews
         KeyConditionExpression: "movieId = :movieId",
         ExpressionAttributeValues: {
           ":movieId": movieId,
@@ -43,7 +45,9 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
         headers: {
           "content-type": "application/json",
         },
-        body: JSON.stringify({ Message: "No reviews found for the specified movieId" }),
+        body: JSON.stringify({
+          Message: "No reviews found for the specified movieId",
+        }),
       };
     }
 
@@ -85,8 +89,6 @@ function createDDbDocClient() {
   return DynamoDBDocumentClient.from(ddbClient, translateConfig);
 }
 
-
-
 // import { APIGatewayProxyHandlerV2 } from "aws-lambda";
 // import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 // import {
@@ -95,7 +97,6 @@ function createDDbDocClient() {
 //   QueryCommandInput,
 // } from "@aws-sdk/lib-dynamodb";
 
-
 // // Initialize DynamoDB client
 // const ddbDocClient = createDDbDocClient();
 
@@ -103,7 +104,6 @@ function createDDbDocClient() {
 //   try {
 //     // Print the event for debugging
 //     console.log("Event: ", JSON.stringify(event));
-
 
 //     if (!isValidQueryParams(queryParams)) {
 //       return {
@@ -151,7 +151,7 @@ function createDDbDocClient() {
 //         },
 //       };
 //     }
-    
+
 //     const commandOutput = await ddbDocClient.send(
 //       new QueryCommand(commandInput)
 //       );
